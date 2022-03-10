@@ -32,9 +32,10 @@ android {
 }
 
 dependencies {
-
-//    implementation(name: "lib-mod-release", ext: "aar")
-    implementation(files("../libs/lib-mod-release.aar"))
+    // 使用此种方式引入会有问题
+    implementation("", name = "lib-mod-release", ext = "aar")
+    // 使用此种方式正常
+//    implementation(files("../libs/lib-mod-release.aar"))
 
     // https://mvnrepository.com/artifact/io.reactivex.rxjava3/rxjava
     implementation("io.reactivex.rxjava3:rxjava:3.1.3")
@@ -48,9 +49,30 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
 }
-//
-//
-//task runAsAarDependencies() {
-//    dependsOn(rootProject.project("lib-mod").getByName("copyAarToApp"))
-//
-//}
+
+afterEvaluate {
+    android.applicationVariants.forEach { variant ->
+        val groupName = "custom"
+        val variantName = variant.name.capitalize()
+        val libProjectName = "lib-mod"
+        val appProjectName = "app"
+        tasks.findByName("pre${variantName}Build")?.apply {
+            group = groupName
+            dependsOn(
+                ":$libProjectName:copy${variantName}AarToApp",
+            )
+        }
+        tasks.create("runAsAarDependencies${variantName}").apply {
+            group = groupName
+            dependsOn(
+//                ":$libProjectName:copy${variantName}AarToApp",
+                ":$appProjectName:assemble${variantName}",
+            )
+            doLast {
+                println("runAsAarDependencies${variantName}")
+            }
+//            finalizedBy(":$appProjectName:install${variantName}")
+        }
+    }
+
+}
