@@ -1,3 +1,5 @@
+import com.github.hanlyjiang.gradle_helper.PropertiesUtils
+
 plugins {
     id("com.android.application")
 }
@@ -32,10 +34,17 @@ android {
 }
 
 dependencies {
-    // 使用此种方式引入会有问题
-    implementation("", name = "lib-mod-release", ext = "aar")
-    // 使用此种方式正常
+    val useAar = PropertiesUtils.getProperties(project, "useAar", false)
+    if (useAar) {
+        logger.log(LogLevel.LIFECYCLE, "use Aar=$useAar")
+        // 使用此种方式引入会有问题
+        implementation("", name = "lib-mod-release", ext = "aar")
+        // 使用此种方式正常
 //    implementation(files("../libs/lib-mod-release.aar"))
+    } else {
+        logger.log(LogLevel.LIFECYCLE, "use Project=${!useAar}")
+        implementation(project(":lib-mod"))
+    }
 
     // https://mvnrepository.com/artifact/io.reactivex.rxjava3/rxjava
     implementation("io.reactivex.rxjava3:rxjava:3.1.3")
