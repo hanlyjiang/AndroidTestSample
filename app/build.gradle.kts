@@ -98,7 +98,7 @@ afterEvaluate {
             doLast {
                 println("runAsAarDependencies${variantName}")
             }
-//            finalizedBy(":$appProjectName:install${variantName}")
+            finalizedBy(":$appProjectName:install${variantName}")
         }
     }
 
