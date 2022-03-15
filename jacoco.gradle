@@ -1,0 +1,143 @@
+//jacoco.gradle
+import org.gradle.api.internal.project.ProjectInternal
+
+apply plugin: 'jacoco'
+
+jacoco {
+    toolVersion = "0.8.7"
+}
+
+android {
+    buildTypes {
+        debug {
+            testCoverageEnabled = true
+        }
+    }
+}
+
+
+project.apply {
+    project.extensions.create("jacocoAndroidUnitTestReport",
+            JacocoAndroidUnitTestReportExtension,
+            JacocoAndroidUnitTestReportExtension.defaultExcludesFactory())
+    project.plugins.apply(JacocoPlugin)
+    Plugin plugin = findAndroidPluginOrThrow(project.plugins)
+
+    def variants = getVariants(project, plugin)
+    Task jacocoTestReportTask = findOrCreateJacocoTestReportTask(project.tasks)
+
+    variants.all { variant ->
+        def sourceDirs = variant.sourceSets.java.srcDirs.collect { it.path }.flatten()
+        def classesDir
+        if (variant.hasProperty('javaCompileProvider')) {
+            classesDir = variant.javaCompileProvider.get().destinationDir
+        } else {
+            classesDir = variant.javaCompile.destinationDir
+        }
+        def unitTestTask = tasks.getByName("test${variant.name.capitalize()}UnitTest")
+        def checkTask = tasks.getByName("connectedCheck")
+
+        def androidTestPath = "../app/build/outputs/code_coverage/debugAndroidTest/connected/"
+
+        def executionData = unitTestTask.jacoco.destinationFile.path
+
+        FileTree javaTree = project.fileTree(dir: classesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
+        def kotlinClassesDir = "${project.buildDir}/tmp/kotlin-classes/${variant.name}"
+        def kotlinTree =
+                project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
+
+        JacocoReport reportTask = project.tasks.create("jacoco${unitTestTask.name.capitalize()}Report",
+                JacocoReport)
+
+        reportTask.dependsOn unitTestTask
+        reportTask.dependsOn checkTask
+
+        reportTask.group = "Reporting"
+        reportTask.executionData.setFrom(project.fileTree(executionData) + project.fileTree(androidTestPath))
+        reportTask.sourceDirectories.setFrom(project.files(sourceDirs))
+        reportTask.classDirectories.setFrom(javaTree + kotlinTree)
+
+        reportTask.reports {
+            def destination = project.jacocoAndroidUnitTestReport.destination
+
+            xml.enabled = true
+            html.enabled true
+            html.destination new File((destination == null) ? "${project.buildDir}/jacoco/jacocoHtml" : "${destination.trim()}/jacocoHtml")
+        }
+        jacocoTestReportTask.dependsOn reportTask
+    }
+}
+
+class JacocoAndroidUnitTestReportExtension {
+
+    public static final Collection<String> androidDataBindingExcludes =
+            ['android/databinding/**/*.class',
+             '**/android/databinding/*Binding.class',
+             '**/databinding/*Binding.class',
+             '**/databinding/*BindingImpl.class',
+             '**/databinding/*Sw600dpImpl.class',
+             '**/BR.*'].asImmutable()
+
+    public static final Collection<String> androidExcludes =
+            ['**/R.class',
+             '**/R$*.class',
+             '**/BuildConfig.*',
+             '**/Manifest*.*'].asImmutable()
+
+    public static final Collection<String> butterKnifeExcludes =
+            ['**/*$ViewInjector*.*',
+             '**/*$ViewBinder*.*'].asImmutable()
+
+    public static final Collection<String> dagger2Excludes =
+            ['**/*_MembersInjector.class',
+             '**/Dagger*Component.class',
+             '**/Dagger*Component$Builder.class',
+             '**/*Module_*Factory.class'].asImmutable()
+
+    public static final Collection<String> defaultExcludes =
+            (androidDataBindingExcludes + androidExcludes + butterKnifeExcludes + dagger2Excludes)
+                    .asImmutable()
+
+    def static defaultExcludesFactory = { defaultExcludes }
+
+    Collection<String> excludes
+    boolean csv
+    boolean html
+    boolean xml
+    String destination
+
+    JacocoAndroidUnitTestReportExtension(Collection<String> excludes) {
+        this.excludes = excludes
+        this.csv = true
+        this.html = true
+        this.xml = true
+        this.destination = null
+    }
+}
+
+
+private static def getVariants(ProjectInternal project, Plugin plugin) {
+    boolean isLibraryPlugin = plugin.class.name.endsWith('.LibraryPlugin')
+    project.android[isLibraryPlugin ? "libraryVariants" : "applicationVariants"]
+}
+
+private static Plugin findAndroidPluginOrThrow(PluginContainer plugins) {
+    Plugin plugin = plugins.findPlugin('android') ?: plugins.findPlugin('android-library')
+    if (!plugin) {
+        throw new GradleException(
+                'You must apply the Android plugin or the Android library plugin before using the jacoco-android plugin')
+    }
+    plugin
+}
+
+private static Task findOrCreateJacocoTestReportTask(TaskContainer tasks) {
+    Task jacocoTestReportTask = tasks.findByName("jacocoTestReport")
+    if (!jacocoTestReportTask) {
+        jacocoTestReportTask = tasks.create("jacocoTestReport")
+        jacocoTestReportTask.group = "Reporting"
+    }
+    jacocoTestReportTask
+}
+//————————————————
+//版权声明：本文为CSDN博主「win-sun」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+//原文链接：https://blog.csdn.net/u010663321/article/details/121761825

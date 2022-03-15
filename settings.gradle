@@ -9,6 +9,6 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "NoSuchMethodError"
+rootProject.name = "AndroidTestSample"
 include ':app'
 include ':lib-mod'
