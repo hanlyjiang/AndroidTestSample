@@ -1,6 +1,4 @@
 //jacoco.gradle
-import org.gradle.api.internal.project.ProjectInternal
-
 apply plugin: 'jacoco'
 
 jacoco {
@@ -16,21 +14,21 @@ android {
     }
 }
 
-
+def genMergeTask = true
 project.apply {
-    project.extensions.create("jacocoAndroidUnitTestReport",
-            JacocoAndroidUnitTestReportExtension,
-            JacocoAndroidUnitTestReportExtension.defaultExcludesFactory({}))
+    project.extensions.create("jacocoAndroid",
+            JacocoAndroidExtension,
+            JacocoAndroidExtension.defaultExcludesFactory({}))
     project.plugins.apply(JacocoPlugin)
     Plugin plugin = findAndroidPluginOrThrow(project.plugins)
 
     def variants = getVariants(project, plugin)
+    // agp 7.2.0 之前的版本，library模块中可使用时，使用此任务可规避无法合并的问题
     Task jacocoTestReportTask = findOrCreateJacocoTestReportTask(project.tasks)
 
     variants.all { variant ->
         def unitTestTask = tasks.getByName("test${variant.name.capitalize()}UnitTest")
         def createDebugCoverageReportTask = tasks.getByName("createDebugCoverageReport")
-//        def createDebugCoverageReportTask = tasks.getByName("connectedCheck")
 
         def sourceDirs = variant.sourceSets.java.srcDirs.collect { it.path }.flatten()
         def classesDir
@@ -42,54 +40,50 @@ project.apply {
         def androidTestPath = "${project.buildDir}/outputs/code_coverage/debugAndroidTest/connected/"
         def unitTestExecutionData = unitTestTask.jacoco.destinationFile.path
 
-        FileTree javaTree = project.fileTree(dir: classesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
+        FileTree javaTree = project.fileTree(dir: classesDir, excludes: project.jacocoAndroid.excludes)
         def kotlinClassesDir = "${project.buildDir}/tmp/kotlin-classes/${variant.name}"
-        def kotlinTree = project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
+        def kotlinTree = project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroid.excludes)
 
-        JacocoMerge mergeTask = tasks.create("jacocoMerge${variant.name.capitalize()}Exec", JacocoMerge.class) {
-            executionData(fileTree(unitTestExecutionData), fileTree(androidTestPath))
-            destinationFile = new File("${project.buildDir}/jacoco/${variant.name}-${name}.exec")
-            group("reporting")
-            dependsOn(unitTestTask, createDebugCoverageReportTask)
-            doFirst {
-                executionData.forEach {
-                    logger.log(LogLevel.LIFECYCLE, "-mergeTask exec: $it.absolutePath")
+        JacocoMerge mergeTask = null;
+        if (genMergeTask) {
+            // keep mergeTask because android studio can not recognise androidTest *.ec (Run - Show Coverage Data)
+            mergeTask = tasks.create("jacocoMerge${variant.name.capitalize()}Exec", JacocoMerge.class) {
+                executionData(fileTree(unitTestExecutionData), fileTree(androidTestPath))
+                destinationFile = new File("${project.buildDir}/jacoco/${variant.name}-${name}.exec")
+                group("reporting")
+                dependsOn(unitTestTask, createDebugCoverageReportTask)
+                doFirst {
+                    executionData.forEach {
+                        logger.log(LogLevel.LIFECYCLE, "-mergeTask exec: $it.absolutePath")
+                    }
                 }
             }
         }
-
         JacocoReport reportTask = tasks.create("jacocoTest${variant.name.capitalize()}Report", JacocoReport.class) {
             group("reporting")
-            dependsOn(mergeTask)
-            executionData.from(fileTree(mergeTask.destinationFile))
-//            executionData.from(fileTree(unitTestExecutionData), fileTree(androidTestPath))
+            if (mergeTask != null) {
+                dependsOn(mergeTask)
+                executionData.from(fileTree(mergeTask.destinationFile))
+            } else {
+                dependsOn(unitTestTask, createDebugCoverageReportTask)
+                executionData.from(fileTree(unitTestExecutionData), fileTree(androidTestPath))
+            }
+
             sourceDirectories.from(files(sourceDirs))
             classDirectories.from(files(javaTree), files(kotlinTree))
 
             reports {
-                def destination = project.jacocoAndroidUnitTestReport.destination
+                def destination = project.jacocoAndroid.destination
                 xml.enabled = true
                 html.enabled true
                 html.destination new File((destination == null) ? "${project.buildDir}/jacoco/jacocoHtml" : "${destination.trim()}/jacocoHtml")
-            }
-
-            doFirst {
-                it.executionData.forEach {
-                    getLogger().log(LogLevel.LIFECYCLE, "-excutionData: ${it.absolutePath}")
-                }
-                it.classDirectories.forEach {
-                    getLogger().log(LogLevel.LIFECYCLE, "-classDirectories: ${it.absolutePath}")
-                }
-                it.sourceDirectories.forEach {
-                    getLogger().log(LogLevel.LIFECYCLE, "-sourceDirectories: ${it.absolutePath}")
-                }
             }
         }
         jacocoTestReportTask.dependsOn reportTask
     }
 }
 
-class JacocoAndroidUnitTestReportExtension {
+class JacocoAndroidExtension {
 
     public static final Collection<String> androidDataBindingExcludes =
             ['android/databinding/**/*.class',
@@ -127,7 +121,7 @@ class JacocoAndroidUnitTestReportExtension {
     boolean xml
     String destination
 
-    JacocoAndroidUnitTestReportExtension(Collection<String> excludes) {
+    JacocoAndroidExtension(Collection<String> excludes) {
         this.excludes = excludes
         this.csv = true
         this.html = true
@@ -137,7 +131,7 @@ class JacocoAndroidUnitTestReportExtension {
 }
 
 
-private static def getVariants(ProjectInternal project, Plugin plugin) {
+private static def getVariants(Project project, Plugin plugin) {
     boolean isLibraryPlugin = plugin.class.name.endsWith('.LibraryPlugin')
     project.android[isLibraryPlugin ? "libraryVariants" : "applicationVariants"]
 }
@@ -159,6 +153,3 @@ private static Task findOrCreateJacocoTestReportTask(TaskContainer tasks) {
     }
     jacocoTestReportTask
 }
-//————————————————
-//版权声明：本文为CSDN博主「win-sun」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
-//原文链接：https://blog.csdn.net/u010663321/article/details/121761825
