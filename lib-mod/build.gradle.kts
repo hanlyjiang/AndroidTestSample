@@ -64,4 +64,4 @@ afterEvaluate {
     }
 }
 
-apply(from="../jacoco.gradle")
+apply(from = "../jacoco.gradle")

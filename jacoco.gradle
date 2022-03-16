@@ -8,6 +8,7 @@ jacoco {
 }
 
 android {
+    publishNonDefault true
     buildTypes {
         debug {
             testCoverageEnabled = true
@@ -27,6 +28,10 @@ project.apply {
     Task jacocoTestReportTask = findOrCreateJacocoTestReportTask(project.tasks)
 
     variants.all { variant ->
+        def unitTestTask = tasks.getByName("test${variant.name.capitalize()}UnitTest")
+        def createDebugCoverageReportTask = tasks.getByName("createDebugCoverageReport")
+//        def createDebugCoverageReportTask = tasks.getByName("connectedCheck")
+
         def sourceDirs = variant.sourceSets.java.srcDirs.collect { it.path }.flatten()
         def classesDir
         if (variant.hasProperty('javaCompileProvider')) {
@@ -34,40 +39,51 @@ project.apply {
         } else {
             classesDir = variant.javaCompile.destinationDir
         }
-        def unitTestTask = tasks.getByName("test${variant.name.capitalize()}UnitTest")
-        def checkTask = tasks.getByName("connectedCheck")
-
-        def androidTestPath = "../${project.name}/build/outputs/code_coverage/debugAndroidTest/connected/"
-
-        def executionData = unitTestTask.jacoco.destinationFile.path
+        def androidTestPath = "${project.buildDir}/outputs/code_coverage/debugAndroidTest/connected/"
+        def unitTestExecutionData = unitTestTask.jacoco.destinationFile.path
 
         FileTree javaTree = project.fileTree(dir: classesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
         def kotlinClassesDir = "${project.buildDir}/tmp/kotlin-classes/${variant.name}"
-        def kotlinTree =
-                project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
+        def kotlinTree = project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroidUnitTestReport.excludes)
 
-        JacocoReport reportTask = project.tasks.create("jacoco${unitTestTask.name.capitalize()}Report",
-                JacocoReport)
-
-        reportTask.dependsOn unitTestTask
-        reportTask.dependsOn checkTask
-
-        reportTask.group = "Reporting"
-        reportTask.executionData.setFrom(project.fileTree(executionData) + project.fileTree(androidTestPath))
-        reportTask.doFirst {
-            reportTask.executionData.forEach {
-                getLogger().log(LogLevel.LIFECYCLE, "-excutionData: ${it.absolutePath}")
+        JacocoMerge mergeTask = tasks.create("jacocoMerge${variant.name.capitalize()}Exec", JacocoMerge.class) {
+            executionData(fileTree(unitTestExecutionData), fileTree(androidTestPath))
+            destinationFile = new File("${project.buildDir}/jacoco/${variant.name}-${name}.exec")
+            group("reporting")
+            dependsOn(unitTestTask, createDebugCoverageReportTask)
+            doFirst {
+                executionData.forEach {
+                    logger.log(LogLevel.LIFECYCLE, "-mergeTask exec: $it.absolutePath")
+                }
             }
         }
-        reportTask.sourceDirectories.setFrom(project.files(sourceDirs))
-        reportTask.classDirectories.setFrom(javaTree + kotlinTree)
 
-        reportTask.reports {
-            def destination = project.jacocoAndroidUnitTestReport.destination
+        JacocoReport reportTask = tasks.create("jacocoTest${variant.name.capitalize()}Report", JacocoReport.class) {
+            group("reporting")
+            dependsOn(mergeTask)
+            executionData.from(fileTree(mergeTask.destinationFile))
+//            executionData.from(fileTree(unitTestExecutionData), fileTree(androidTestPath))
+            sourceDirectories.from(files(sourceDirs))
+            classDirectories.from(files(javaTree), files(kotlinTree))
 
-            xml.enabled = true
-            html.enabled true
-            html.destination new File((destination == null) ? "${project.buildDir}/jacoco/jacocoHtml" : "${destination.trim()}/jacocoHtml")
+            reports {
+                def destination = project.jacocoAndroidUnitTestReport.destination
+                xml.enabled = true
+                html.enabled true
+                html.destination new File((destination == null) ? "${project.buildDir}/jacoco/jacocoHtml" : "${destination.trim()}/jacocoHtml")
+            }
+
+            doFirst {
+                it.executionData.forEach {
+                    getLogger().log(LogLevel.LIFECYCLE, "-excutionData: ${it.absolutePath}")
+                }
+                it.classDirectories.forEach {
+                    getLogger().log(LogLevel.LIFECYCLE, "-classDirectories: ${it.absolutePath}")
+                }
+                it.sourceDirectories.forEach {
+                    getLogger().log(LogLevel.LIFECYCLE, "-sourceDirectories: ${it.absolutePath}")
+                }
+            }
         }
         jacocoTestReportTask.dependsOn reportTask
     }
