@@ -17,8 +17,7 @@ android {
 def genMergeTask = true
 project.apply {
     project.extensions.create("jacocoAndroid",
-            JacocoAndroidExtension,
-            JacocoAndroidExtension.defaultExcludesFactory({}))
+            JacocoAndroidExtension, [])
     project.plugins.apply(JacocoPlugin)
     Plugin plugin = findAndroidPluginOrThrow(project.plugins)
 
@@ -40,14 +39,15 @@ project.apply {
         def androidTestPath = "${project.buildDir}/outputs/code_coverage/debugAndroidTest/connected/"
         def unitTestExecutionData = unitTestTask.jacoco.destinationFile.path
 
-        FileTree javaTree = project.fileTree(dir: classesDir, excludes: project.jacocoAndroid.excludes)
+        FileTree javaTree = project.fileTree(dir: classesDir, excludes: project.jacocoAndroid.allExcludes())
         def kotlinClassesDir = "${project.buildDir}/tmp/kotlin-classes/${variant.name}"
-        def kotlinTree = project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroid.excludes)
+        def kotlinTree = project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroid.allExcludes())
 
         JacocoMerge mergeTask = null;
         if (genMergeTask) {
             // keep mergeTask because android studio can not recognise androidTest *.ec (Run - Show Coverage Data)
             mergeTask = tasks.create("jacocoMerge${variant.name.capitalize()}Exec", JacocoMerge.class) {
+                description("merge ${unitTestTask.name} and ${createDebugCoverageReportTask.name} executionData")
                 executionData(fileTree(unitTestExecutionData), fileTree(androidTestPath))
                 destinationFile = new File("${project.buildDir}/jacoco/${variant.name}-${name}.exec")
                 group("reporting")
@@ -61,6 +61,7 @@ project.apply {
         }
         JacocoReport reportTask = tasks.create("jacocoTest${variant.name.capitalize()}Report", JacocoReport.class) {
             group("reporting")
+            description("create merged ${unitTestTask.name} and ${createDebugCoverageReportTask.name} jacocoTestReport")
             if (mergeTask != null) {
                 dependsOn(mergeTask)
                 executionData.from(fileTree(mergeTask.destinationFile))
@@ -113,13 +114,15 @@ class JacocoAndroidExtension {
             (androidDataBindingExcludes + androidExcludes + butterKnifeExcludes + dagger2Excludes)
                     .asImmutable()
 
-    def static defaultExcludesFactory = { defaultExcludes }
-
     Collection<String> excludes
     boolean csv
     boolean html
     boolean xml
     String destination
+
+    Collection<String> allExcludes() {
+        return (defaultExcludes + excludes)
+    }
 
     JacocoAndroidExtension(Collection<String> excludes) {
         this.excludes = excludes
