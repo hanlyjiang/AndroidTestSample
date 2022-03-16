@@ -17,7 +17,6 @@ android {
 
 
 def genMergeTask = true
-project.logger.log(LogLevel.LIFECYCLE, "--- project : ${project.name}")
 afterEvaluate { project ->
     project.extensions.create("jacocoAndroid",
             JacocoAndroidExtension, loadExcludesFromFile(project) /*[]*/)
