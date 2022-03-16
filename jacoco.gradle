@@ -19,7 +19,7 @@ android {
 project.apply {
     project.extensions.create("jacocoAndroidUnitTestReport",
             JacocoAndroidUnitTestReportExtension,
-            JacocoAndroidUnitTestReportExtension.defaultExcludesFactory())
+            JacocoAndroidUnitTestReportExtension.defaultExcludesFactory({}))
     project.plugins.apply(JacocoPlugin)
     Plugin plugin = findAndroidPluginOrThrow(project.plugins)
 
@@ -37,7 +37,7 @@ project.apply {
         def unitTestTask = tasks.getByName("test${variant.name.capitalize()}UnitTest")
         def checkTask = tasks.getByName("connectedCheck")
 
-        def androidTestPath = "../app/build/outputs/code_coverage/debugAndroidTest/connected/"
+        def androidTestPath = "../${project.name}/build/outputs/code_coverage/debugAndroidTest/connected/"
 
         def executionData = unitTestTask.jacoco.destinationFile.path
 
@@ -54,6 +54,11 @@ project.apply {
 
         reportTask.group = "Reporting"
         reportTask.executionData.setFrom(project.fileTree(executionData) + project.fileTree(androidTestPath))
+        reportTask.doFirst {
+            reportTask.executionData.forEach {
+                getLogger().log(LogLevel.LIFECYCLE, "-excutionData: ${it.absolutePath}")
+            }
+        }
         reportTask.sourceDirectories.setFrom(project.files(sourceDirs))
         reportTask.classDirectories.setFrom(javaTree + kotlinTree)
 
