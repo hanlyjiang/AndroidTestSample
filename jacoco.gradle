@@ -1,3 +1,5 @@
+import java.util.function.Consumer
+
 //jacoco.gradle
 apply plugin: 'jacoco'
 
@@ -6,7 +8,6 @@ jacoco {
 }
 
 android {
-    publishNonDefault true
     buildTypes {
         debug {
             testCoverageEnabled = true
@@ -14,10 +15,12 @@ android {
     }
 }
 
+
 def genMergeTask = true
-project.apply {
+project.logger.log(LogLevel.LIFECYCLE, "--- project : ${project.name}")
+afterEvaluate { project ->
     project.extensions.create("jacocoAndroid",
-            JacocoAndroidExtension, [])
+            JacocoAndroidExtension, loadExcludesFromFile(project) /*[]*/)
     project.plugins.apply(JacocoPlugin)
     Plugin plugin = findAndroidPluginOrThrow(project.plugins)
 
@@ -133,6 +136,31 @@ class JacocoAndroidExtension {
     }
 }
 
+
+private static Collection<String> loadExcludesFromFile(Project project) {
+    File file = new File("${project.projectDir}/jacoco-excludes")
+    if (file.exists()) {
+        project.logger.log(LogLevel.DEBUG, "${file.absolutePath} found!")
+    } else {
+        project.logger.log(LogLevel.WARN, "${file.absolutePath} not found!")
+        return []
+    }
+    List<String> excludeList = new ArrayList<>()
+    try (
+            BufferedReader fileReader = new BufferedReader(new FileReader(file))
+    ) {
+        String line
+        while ((line = fileReader.readLine()) != null) {
+            if (!line.trim().startsWith("#")) {
+                excludeList.add(line.trim() + "")
+            }
+        }
+    }
+    excludeList.forEach {
+        project.logger.log(LogLevel.DEBUG, "add exclude:" + it)
+    }
+    return excludeList
+}
 
 private static def getVariants(Project project, Plugin plugin) {
     boolean isLibraryPlugin = plugin.class.name.endsWith('.LibraryPlugin')
