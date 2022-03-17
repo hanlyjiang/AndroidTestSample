@@ -27,9 +27,9 @@
  * 其他说明：
  *   根据模块的不同类型，在AGP版本为7.2.0以下时，可选如下执行方式：
  *      library 项目中：
- *          执行 gradle 任务 :   jacocoTestReport
+ *          执行 gradle 任务 :   jacocoTestReport | jacocoTestReleaseReport | acrhiveJacocoTestReleaseReport
  *      app 项目中
- *          执行 gradle 任务：   jacocoTestDebugReport
+ *          执行 gradle 任务：   jacocoTestDebugReport | acrhiveJacocoTestDebugReport
  *
  */
 
