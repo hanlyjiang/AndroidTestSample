@@ -1,6 +1,41 @@
-import java.util.function.Consumer
+/*
+ * 用于生成 jacoco 测试覆盖率报告（ 合并 本地单元测试 及 androidTest ）
+ *
+ * 引入：
+ *      apply from: "jacoco.gradle"
+ *
+ * 配置：
+ *  支持配置自定义的过滤规则，配置方式如下：
+ *  - 可在模块根目录下添加一个名为 jacoco-exclude 的文件，其中每一行代表一个过滤条件，可使用正则表达式进行编写
+ *
+ *
+ * 运行：
+ *      - 执行 gradle 任务 :   jacocoTestReport 生成测试覆盖率报告
+ *          - 生成的报告位于： build/jacoco/jacocoHtml
+ *      - 执行 jacocoExcludes 任务输出所有的过滤规则，直接在任务执行输出中查看
+ *      - 执行 jacocoMergeDebugExec 任务合并androidTest及本地单元测试的jacoco的执行exec文件，后续可在AndroidStudio中加载覆盖率数据
+ *          - 合并后的文件位于 build/jacoco/ 目录中 xx-jacocoMergeXXXExec.exec 文件
+ *          - AS 加载exec文件的路径： 菜单 - Run - Show Coverage Data - 选取 exec 文件
+ *          - 注意： 由于AGP插件问题，目前library项目的exec合并有问题，升级到AGP7.2.0-beta04之后正常
+ *      - 执行 archiverJacocoTestReport 会执行jacocoTestReport任务，然后将build/jacoco拷贝到项目下面的 reporting 目录
+ *
+ * 注意：
+ * - ！！！测试pass后才会生成报告！！！
+ * - 执行期间请保持屏幕开启状态，同时，注意手机上可能弹出的测试应用安装确认弹框，以确保 androidTest 能正常执行
+ * - MIUI需要关闭 开发者选项-MIUI优化 选项（自动测试需要，单独测试时可只手动开启对应测试app的自启动及后台弹出界面的权限）
+ *
+ * 其他说明：
+ *   根据模块的不同类型，在AGP版本为7.2.0以下时，可选如下执行方式：
+ *      library 项目中：
+ *          执行 gradle 任务 :   jacocoTestReport
+ *      app 项目中
+ *          执行 gradle 任务：   jacocoTestDebugReport
+ *
+ */
 
-//jacoco.gradle
+
+import java.text.SimpleDateFormat
+
 apply plugin: 'jacoco'
 
 jacoco {
@@ -16,7 +51,7 @@ android {
 }
 
 
-def genMergeTask = true
+def groupName = "reporting"
 afterEvaluate { project ->
     project.extensions.create("jacocoAndroid",
             JacocoAndroidExtension, loadExcludesFromFile(project) /*[]*/)
@@ -24,7 +59,7 @@ afterEvaluate { project ->
     Plugin plugin = findAndroidPluginOrThrow(project.plugins)
 
     def variants = getVariants(project, plugin)
-    // agp 7.2.0 之前的版本，library模块中可使用时，使用此任务可规避无法合并的问题
+    // agp 7.2.0-beta04 之前的版本，library模块中可使用时，使用此任务可规避无法合并的问题
     Task jacocoTestReportTask = findOrCreateJacocoTestReportTask(project.tasks)
 
     variants.all { variant ->
@@ -46,13 +81,13 @@ afterEvaluate { project ->
         def kotlinTree = project.fileTree(dir: kotlinClassesDir, excludes: project.jacocoAndroid.allExcludes())
 
         JacocoMerge mergeTask = null;
-        if (genMergeTask) {
+        if (jacocoAndroid.enableMergeExecTask) {
             // keep mergeTask because android studio can not recognise androidTest *.ec (Run - Show Coverage Data)
             mergeTask = tasks.create("jacocoMerge${variant.name.capitalize()}Exec", JacocoMerge.class) {
                 description("merge ${unitTestTask.name} and ${createDebugCoverageReportTask.name} executionData")
                 executionData(fileTree(unitTestExecutionData), fileTree(androidTestPath))
                 destinationFile = new File("${project.buildDir}/jacoco/${variant.name}-${name}.exec")
-                group("reporting")
+                group(groupName)
                 dependsOn(unitTestTask, createDebugCoverageReportTask)
                 doFirst {
                     executionData.forEach {
@@ -62,7 +97,7 @@ afterEvaluate { project ->
             }
         }
         JacocoReport reportTask = tasks.create("jacocoTest${variant.name.capitalize()}Report", JacocoReport.class) {
-            group("reporting")
+            group(groupName)
             description("create merged ${unitTestTask.name} and ${createDebugCoverageReportTask.name} jacocoTestReport")
             if (mergeTask != null) {
                 dependsOn(mergeTask)
@@ -79,11 +114,49 @@ afterEvaluate { project ->
                 def destination = project.jacocoAndroid.destination
                 xml.enabled = true
                 html.enabled true
-                html.destination new File((destination == null) ? "${project.buildDir}/jacoco/jacocoHtml" : "${destination.trim()}/jacocoHtml")
+                html.destination new File((destination == null)
+                                    ? "${project.buildDir}/jacoco/jacocoHtml"
+                                    : "${destination.trim()}/jacocoHtml")
             }
         }
         jacocoTestReportTask.dependsOn reportTask
+
+        String destinationDir = reportTask.reports.html.destination.getParent()
+        // 添加辅助任务
+        if (tasks.findByName("acrhive${jacocoTestReportTask.name.capitalize()}") == null) {
+            tasks.create("acrhive${jacocoTestReportTask.name.capitalize()}", Copy.class) {
+                group("${groupName}Archive")
+                description("archive ${jacocoTestReportTask.name} to projectDir")
+
+                from("${destinationDir}")
+                into("${project.projectDir}/reporting/")
+
+                dependsOn jacocoTestReportTask
+            }
+        }
+        tasks.create("acrhive${reportTask.name.capitalize()}", Copy.class) {
+            group("${groupName}Archive")
+            description("archive ${reportTask.name} to projectDir")
+
+            from("${destinationDir}")
+            into("${project.projectDir}/reporting/")
+
+
+            dependsOn reportTask
+        }
     }
+
+    tasks.create("jacocoExcludes") {
+        group(groupName)
+        description("print jacoco exclude rules")
+        doLast {
+            for (item in project.jacocoAndroid.allExcludes()) {
+                project.logger.log(LogLevel.LIFECYCLE, item)
+            }
+        }
+    }
+
+
 }
 
 class JacocoAndroidExtension {
@@ -94,6 +167,8 @@ class JacocoAndroidExtension {
              '**/databinding/*Binding.class',
              '**/databinding/*BindingImpl.class',
              '**/databinding/*Sw600dpImpl.class',
+             '**/DataBinder*.class',
+             '**/DataBindingTriggerClass.class',
              '**/BR.*'].asImmutable()
 
     public static final Collection<String> androidExcludes =
@@ -108,9 +183,18 @@ class JacocoAndroidExtension {
 
     public static final Collection<String> dagger2Excludes =
             ['**/*_MembersInjector.class',
+             '**/*_Factory.class',
              '**/Dagger*Component.class',
+             '**/Dagger*Component$*.class',
              '**/Dagger*Component$Builder.class',
-             '**/*Module_*Factory.class'].asImmutable()
+             '**/*Module_*Factory.class',
+             // dagger-android
+             '**/*_ContributeModule_*.*',
+            ].asImmutable()
+
+    public static final Collection<String> aRouterExcludes =
+            ["com/alibaba/android/arouter/routes/**"].asImmutable()
+
 
     public static final Collection<String> defaultExcludes =
             (androidDataBindingExcludes + androidExcludes + butterKnifeExcludes + dagger2Excludes)
@@ -121,6 +205,7 @@ class JacocoAndroidExtension {
     boolean html
     boolean xml
     String destination
+    boolean enableMergeExecTask
 
     Collection<String> allExcludes() {
         return (defaultExcludes + excludes)
@@ -132,6 +217,7 @@ class JacocoAndroidExtension {
         this.html = true
         this.xml = true
         this.destination = null
+        this.enableMergeExecTask = true
     }
 }
 
@@ -145,14 +231,23 @@ private static Collection<String> loadExcludesFromFile(Project project) {
         return []
     }
     List<String> excludeList = new ArrayList<>()
-    try (
-            BufferedReader fileReader = new BufferedReader(new FileReader(file))
-    ) {
+    BufferedReader fileReader;
+    try {
+        fileReader = new BufferedReader(new FileReader(file))
         String line
         while ((line = fileReader.readLine()) != null) {
+            if (line.trim().isEmpty()) {
+                continue
+            }
             if (!line.trim().startsWith("#")) {
                 excludeList.add(line.trim() + "")
             }
+        }
+    } catch (Exception ignored) {
+        project.logger.log(LogLevel.ERROR, "add exclude failed!")
+    } finally {
+        if (fileReader != null) {
+            fileReader.close()
         }
     }
     excludeList.forEach {
@@ -182,4 +277,8 @@ private static Task findOrCreateJacocoTestReportTask(TaskContainer tasks) {
         jacocoTestReportTask.group = "Reporting"
     }
     jacocoTestReportTask
+}
+
+private static String timeStamp() {
+    return new SimpleDateFormat("YYYY-MM-dd_HH-mm").format(new Date())
 }
