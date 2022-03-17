@@ -16,11 +16,11 @@ public class MainActivityTest {
 
     @Before
     public void setUp() throws Exception {
+        ActivityScenario<MainActivity> activityScenario = ActivityScenario.launch(MainActivity.class);
     }
 
     @Test
     public void onCreate() {
-        ActivityScenario<MainActivity> launch = ActivityScenario.launch(MainActivity.class);
         onView(withId(R.id.button)).perform(ViewActions.click());
     }
 }

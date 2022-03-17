@@ -8,7 +8,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:7.2.0-beta04"
+        classpath "com.android.tools.build:gradle:7.1.2"
         classpath "com.github.hanlyjiang:gradle-helper:1.0.1-SNAPSHOT"
         classpath "org.jacoco:org.jacoco.core:0.8.7"
     }
