@@ -65,11 +65,11 @@ android {
 
 ```kotlin
     tasks.withType(com.android.build.gradle.internal.coverage.JacocoReportTask::class.java) {
-        logger.lifecycle("-> JacocoReportTask task : $name")
-        doFirst {
-            logger.lifecycle("-> JacocoReportTask task : $name , ${jacocoConnectedTestsCoverageDir.get()})}")
-        }
+    logger.lifecycle("-> JacocoReportTask task : $name")
+    doFirst {
+        logger.lifecycle("-> JacocoReportTask task : $name , ${jacocoConnectedTestsCoverageDir.get()})}")
     }
+}
 ```
 
 然后执行`createDebugCoverageReport`, 输出如下 ：
@@ -107,8 +107,8 @@ android {
     }
 }
 afterEvaluate {
-	// 由于我们需要获取对应的源码及class目录，所以使用 android.applicationVariants forEach 来获取变体
-	android.applicationVariants.forEach { variant ->
+    // 由于我们需要获取对应的源码及class目录，所以使用 android.applicationVariants forEach 来获取变体
+    android.applicationVariants.forEach { variant ->
         if (variant.buildType.isTestCoverageEnabled) {
             val variantCapName = variant.name.capitalize();
             tasks.register(
@@ -116,22 +116,22 @@ afterEvaluate {
                 JacocoReport::class.java
             ) {
                 group = "jacoco"
-              	// 依赖测试任务
-	              dependsOn("test${variantCapName}UnitTest")
-                
-              	// 根据执行数据生成报告，直接传输task即可
+                // 依赖测试任务
+                dependsOn("test${variantCapName}UnitTest")
+
+                // 根据执行数据生成报告，直接传输task即可
                 executionData(tasks.getByName("test${variantCapName}UnitTest"))
-              	// 报告中会包含源码，可以查看源码的对应的覆盖情况
+                // 报告中会包含源码，可以查看源码的对应的覆盖情况
                 sourceDirectories.from(variant.sourceSets.flatMap { it.javaDirectories + it.kotlinDirectories })
                 // 没有 class 数据报告会是空的
                 classDirectories.from(variant.javaCompileProvider.get().destinationDirectory)
-              
-              	doLast {
+
+                doLast {
                     logger.lifecycle(reports.html.outputLocation.asFile.get().absolutePath)
                 }
             }
         }
-	}
+    }
 }
 ```
 
@@ -185,7 +185,7 @@ afterEvaluate {
                     "test${variantCapName}UnitTest",
                     "create${variantCapName}AndroidTestCoverageReport"
                 )
-              	doLast {
+                doLast {
                     logger.lifecycle(reports.html.outputLocation.asFile.get().absolutePath)
                 }
             }
@@ -214,7 +214,7 @@ afterEvaluate {
 
 <img src="https://gitee.com/hanlyjiang/image-repo/raw/master/image/202203192208217.png" alt="image-20220319220850184" style="zoom:50%;" />
 
-执行的数据文件位于类似如下目录 ： 
+执行的数据文件位于类似如下目录 ：
 
 - build/outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec
 - build/outputs/code_coverage/debugAndroidTest/connected/Pixel_5_API_Tiramisu(AVD) - 12/coverage.ec
@@ -309,3 +309,9 @@ afterEvaluate {
 执行之后位于：`build/jacoco/mergeJacocoDebugExecution.exec`, 通过AndroidStudio 加载之后，显示如下，两种测试的结果已经合并显示了。
 
 <img src="https://gitee.com/hanlyjiang/image-repo/raw/master/image/202203192219808.png" alt="image-20220319221952765" style="zoom:50%;" />
+
+
+
+## 完成配置文件
+
+请参考： [AndroidTestSample/build.gradle.kts at main · hanlyjiang/AndroidTestSample (github.com)](https://github.com/hanlyjiang/AndroidTestSample/blob/main/app/build.gradle.kts)
