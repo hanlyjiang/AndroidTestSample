@@ -1,6 +1,8 @@
 package com.github.hanlyjiang.sample.utils;
 
 
+import com.github.hanlyjiang.sample.StringUtils;
+
 import org.junit.Assert;
 import org.junit.Test;
 

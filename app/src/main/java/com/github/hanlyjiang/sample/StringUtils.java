@@ -1,4 +1,4 @@
-package com.github.hanlyjiang.sample.utils;
+package com.github.hanlyjiang.sample;
 
 public class StringUtils {
 
