@@ -141,6 +141,7 @@ afterEvaluate {
                 JacocoReport::class.java
             ) {
                 group = "jacoco"
+                description = "Generate jacoco report for test${variantCapName}UnitTest"
                 executionData(tasks.getByName("test${variantCapName}UnitTest"))
                 sourceDirectories.from(variant.sourceSets.flatMap { it.javaDirectories + it.kotlinDirectories })
                 classDirectories.from(variant.javaCompileProvider.get().destinationDirectory)
@@ -152,6 +153,8 @@ afterEvaluate {
 
             tasks.register("mergedJacoco${variantCapName}TestReport", JacocoReport::class.java) {
                 group = "jacoco"
+                description =
+                    "Generate merged jacoco report for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
                 executionData(
                     tasks.getByName("test${variantCapName}UnitTest"),
                 )
@@ -173,6 +176,8 @@ afterEvaluate {
 
             tasks.register("mergeJacoco${variantCapName}Execution", JacocoMerge::class.java) {
                 group = "jacoco"
+                description =
+                    "Generate merged jacoco execution for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
                 executionData(
                     tasks.getByName("test${variantCapName}UnitTest"),
                 )
