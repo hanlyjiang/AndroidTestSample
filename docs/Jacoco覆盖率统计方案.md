@@ -312,6 +312,6 @@ afterEvaluate {
 
 
 
-## 完成配置文件
+## 完整配置文件
 
 请参考： [AndroidTestSample/build.gradle.kts at main · hanlyjiang/AndroidTestSample (github.com)](https://github.com/hanlyjiang/AndroidTestSample/blob/main/app/build.gradle.kts)
