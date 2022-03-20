@@ -117,17 +117,17 @@ android {
 
 afterEvaluate {
     tasks.getByName("testDebugUnitTest").apply {
-        (this.extensions.getByName("jacoco") as JacocoTaskExtension).apply {
+        this.extensions.getByName<JacocoTaskExtension>("jacoco").apply {
             logger.lifecycle("testDebugUnitTest dest: ${this.destinationFile?.absolutePath}")
         }
     }
-    tasks.withType(org.gradle.api.tasks.testing.Test::class.java) {
+    tasks.withType<Test> {
         logger.lifecycle("-> test task : $name")
     }
-    tasks.withType(JacocoReport::class.java) {
+    tasks.withType<JacocoReport> {
         logger.lifecycle("-> JacocoReport task : $name")
     }
-    tasks.withType(com.android.build.gradle.internal.coverage.JacocoReportTask::class.java) {
+    tasks.withType<com.android.build.gradle.internal.coverage.JacocoReportTask> {
         logger.lifecycle("-> JacocoReportTask task : $name")
         doFirst {
             logger.lifecycle("-> JacocoReportTask task : $name , ${jacocoConnectedTestsCoverageDir.get()})}")
@@ -136,9 +136,8 @@ afterEvaluate {
     android.applicationVariants.forEach { variant ->
         if (variant.buildType.isTestCoverageEnabled) {
             val variantCapName = variant.name.capitalize();
-            tasks.register(
-                "jacocoTest${variantCapName}UnitTestReport",
-                JacocoReport::class.java
+            tasks.register<JacocoReport>(
+                "jacocoTest${variantCapName}UnitTestReport"
             ) {
                 group = "jacoco"
                 description = "Generate jacoco report for test${variantCapName}UnitTest"
@@ -151,7 +150,7 @@ afterEvaluate {
                 }
             }
 
-            tasks.register("mergedJacoco${variantCapName}TestReport", JacocoReport::class.java) {
+            tasks.register<JacocoReport>("mergedJacoco${variantCapName}TestReport") {
                 group = "jacoco"
                 description =
                     "Generate merged jacoco report for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
@@ -174,7 +173,7 @@ afterEvaluate {
                 }
             }
 
-            tasks.register("mergeJacoco${variantCapName}Execution", JacocoMerge::class.java) {
+            tasks.register<JacocoMerge>("mergeJacoco${variantCapName}Execution") {
                 group = "jacoco"
                 description =
                     "Generate merged jacoco execution for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
