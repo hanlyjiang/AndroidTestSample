@@ -1,9 +1,27 @@
 buildscript {
+//    pluginManagement {
+//        repositories {
+//            // 从本地插件仓库加载我们自己的插件
+//            maven {
+//                url = "./local-maven-repo/plugins"
+//            }
+//            // 优先从阿里云的镜像仓库加载插件
+//            maven { setUrl("https://maven.aliyun.com/repository/gradle-plugin") }
+//            maven { setUrl("https://maven.aliyun.com/repository/jcenter") }
+//            maven { setUrl("https://maven.aliyun.com/repository/google") }
+//            maven { setUrl("https://maven.aliyun.com/repository/public") }
+//            gradlePluginPortal()
+//        }
+//    }
     repositories {
         maven {
             name("snapshot")
             url("https://oss.sonatype.org/content/repositories/snapshots")
         }
+        maven { setUrl("https://maven.aliyun.com/repository/google") }
+        maven { setUrl("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { setUrl("https://maven.aliyun.com/repository/jcenter") }
+        maven { setUrl("https://maven.aliyun.com/repository/public") }
         google()
         mavenCentral()
     }
@@ -11,7 +29,9 @@ buildscript {
         classpath "com.android.tools.build:gradle:7.1.2"
         classpath "com.github.hanlyjiang:gradle-helper:1.0.1-SNAPSHOT"
         classpath "org.jacoco:org.jacoco.core:0.8.7"
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.10'
     }
+
 }
 
 task clean(type: Delete) {

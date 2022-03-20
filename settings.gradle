@@ -1,6 +1,28 @@
+pluginManagement {
+    repositories {
+        // 从本地插件仓库加载我们自己的插件
+        maven {
+            url = "./local-maven-repo/plugins"
+        }
+        // 优先从阿里云的镜像仓库加载插件
+        maven { setUrl("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { setUrl("https://maven.aliyun.com/repository/jcenter") }
+        maven { setUrl("https://maven.aliyun.com/repository/google") }
+        maven { setUrl("https://maven.aliyun.com/repository/public") }
+        gradlePluginPortal()
+    }
+}
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven {
+            name = "projectLocalPluginRepo"
+            url = uri(new File(rootDir, "local-maven-repo/plugins"))
+        }
+        maven { setUrl("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { setUrl("https://maven.aliyun.com/repository/jcenter") }
+        maven { setUrl("https://maven.aliyun.com/repository/google") }
+        maven { setUrl("https://maven.aliyun.com/repository/public") }
         google()
         mavenCentral()
         jcenter() // Warning: this repository is going to shut down soon
@@ -9,6 +31,8 @@ dependencyResolutionManagement {
         }
     }
 }
+
 rootProject.name = "AndroidTestSample"
 include ':app'
 include ':lib-mod'
+include ':android-jacoco-config-plugin'

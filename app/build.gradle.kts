@@ -3,6 +3,8 @@ import com.github.hanlyjiang.gradle_helper.PropertiesUtils.writeLocalProperties
 
 plugins {
     id("com.android.application")
+    // 使用 plugin 替换手动配置，需要AGP 7.0 及以上
+    id("com.github.hanlyjiang.android-jacoco-config") version ("0.0.3")
 }
 
 android {
@@ -104,8 +106,6 @@ afterEvaluate {
 
 }
 
-//apply(from = "../jacoco.gradle")
-apply(plugin = "jacoco")
 
 android {
     buildTypes {
@@ -115,81 +115,89 @@ android {
     }
 }
 
-afterEvaluate {
-    tasks.getByName("testDebugUnitTest").apply {
-        this.extensions.getByName<JacocoTaskExtension>("jacoco").apply {
-            logger.lifecycle("testDebugUnitTest dest: ${this.destinationFile?.absolutePath}")
-        }
-    }
-    tasks.withType<Test> {
-        logger.lifecycle("-> test task : $name")
-    }
-    tasks.withType<JacocoReport> {
-        logger.lifecycle("-> JacocoReport task : $name")
-    }
-    tasks.withType<com.android.build.gradle.internal.coverage.JacocoReportTask> {
-        logger.lifecycle("-> JacocoReportTask task : $name")
-        doFirst {
-            logger.lifecycle("-> JacocoReportTask task : $name , ${jacocoConnectedTestsCoverageDir.get()})}")
-        }
-    }
-    android.applicationVariants.forEach { variant ->
-        if (variant.buildType.isTestCoverageEnabled) {
-            val variantCapName = variant.name.capitalize();
-            tasks.register<JacocoReport>(
-                "jacocoTest${variantCapName}UnitTestReport"
-            ) {
-                group = "jacoco"
-                description = "Generate jacoco report for test${variantCapName}UnitTest"
-                executionData(tasks.getByName("test${variantCapName}UnitTest"))
-                sourceDirectories.from(variant.sourceSets.flatMap { it.javaDirectories + it.kotlinDirectories })
-                classDirectories.from(variant.javaCompileProvider.get().destinationDirectory)
-                dependsOn("test${variantCapName}UnitTest")
-                doLast {
-                    logger.lifecycle("Jacoco Report: " + reports.html.outputLocation.asFile.get().absolutePath)
-                }
-            }
 
-            tasks.register<JacocoReport>("mergedJacoco${variantCapName}TestReport") {
-                group = "jacoco"
-                description =
-                    "Generate merged jacoco report for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
-                executionData(
-                    tasks.getByName("test${variantCapName}UnitTest"),
-                )
-                val androidCoverageTask =
-                    tasks.getByName("create${variantCapName}AndroidTestCoverageReport")
-                if (androidCoverageTask is com.android.build.gradle.internal.coverage.JacocoReportTask) {
-                    executionData(androidCoverageTask.jacocoConnectedTestsCoverageDir.asFileTree)
-                }
-                sourceDirectories.from(variant.sourceSets.flatMap { it.javaDirectories + it.kotlinDirectories })
-                classDirectories.from(variant.javaCompileProvider.get().destinationDirectory)
-                dependsOn(
-                    "test${variantCapName}UnitTest",
-                    "create${variantCapName}AndroidTestCoverageReport"
-                )
-                doLast {
-                    logger.lifecycle("Jacoco Report: " + reports.html.outputLocation.asFile.get().absolutePath)
-                }
-            }
+/*
+* 手动配置
+**/
+//apply(from = "../jacoco.gradle")
 
-            tasks.register<JacocoMerge>("mergeJacoco${variantCapName}Execution") {
-                group = "jacoco"
-                description =
-                    "Generate merged jacoco execution for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
-                executionData(
-                    tasks.getByName("test${variantCapName}UnitTest"),
-                )
-                val androidCoverageTask =
-                    tasks.getByName("create${variantCapName}AndroidTestCoverageReport")
-                if (androidCoverageTask is com.android.build.gradle.internal.coverage.JacocoReportTask) {
-                    executionData(androidCoverageTask.jacocoConnectedTestsCoverageDir.asFileTree)
-                }
-                doLast {
-                    logger.lifecycle("Jacoco Execution: " + destinationFile.absolutePath)
-                }
-            }
-        }
-    }
-}
+//apply(plugin = "jacoco")
+//
+//afterEvaluate {
+//    tasks.getByName("testDebugUnitTest").apply {
+//        this.extensions.getByName<JacocoTaskExtension>("jacoco").apply {
+//            logger.lifecycle("testDebugUnitTest dest: ${this.destinationFile?.absolutePath}")
+//        }
+//    }
+//    tasks.withType<Test> {
+//        logger.lifecycle("-> test task : $name")
+//    }
+//    tasks.withType<JacocoReport> {
+//        logger.lifecycle("-> JacocoReport task : $name")
+//    }
+//    tasks.withType<com.android.build.gradle.internal.coverage.JacocoReportTask> {
+//        logger.lifecycle("-> JacocoReportTask task : $name")
+//        doFirst {
+//            logger.lifecycle("-> JacocoReportTask task : $name , ${jacocoConnectedTestsCoverageDir.get()})}")
+//        }
+//    }
+//    android.applicationVariants.forEach { variant ->
+//        if (variant.buildType.isTestCoverageEnabled) {
+//            val variantCapName = variant.name.capitalize();
+//            tasks.register<JacocoReport>(
+//                "jacocoTest${variantCapName}UnitTestReport"
+//            ) {
+//                group = "jacoco"
+//                description = "Generate jacoco report for test${variantCapName}UnitTest"
+//                executionData(tasks.getByName("test${variantCapName}UnitTest"))
+//                sourceDirectories.from(variant.sourceSets.flatMap { it.javaDirectories + it.kotlinDirectories })
+//                classDirectories.from(variant.javaCompileProvider.get().destinationDirectory)
+//                dependsOn("test${variantCapName}UnitTest")
+//                doLast {
+//                    logger.lifecycle("Jacoco Report: " + reports.html.outputLocation.asFile.get().absolutePath)
+//                }
+//            }
+//
+//            tasks.register<JacocoReport>("mergedJacoco${variantCapName}TestReport") {
+//                group = "jacoco"
+//                description =
+//                    "Generate merged jacoco report for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
+//                executionData(
+//                    tasks.getByName("test${variantCapName}UnitTest"),
+//                )
+//                val androidCoverageTask =
+//                    tasks.getByName("create${variantCapName}AndroidTestCoverageReport")
+//                if (androidCoverageTask is com.android.build.gradle.internal.coverage.JacocoReportTask) {
+//                    executionData(androidCoverageTask.jacocoConnectedTestsCoverageDir.asFileTree)
+//                }
+//                sourceDirectories.from(variant.sourceSets.flatMap { it.javaDirectories + it.kotlinDirectories })
+//                classDirectories.from(variant.javaCompileProvider.get().destinationDirectory)
+//                dependsOn(
+//                    "test${variantCapName}UnitTest",
+//                    "create${variantCapName}AndroidTestCoverageReport"
+//                )
+//                doLast {
+//                    logger.lifecycle("Jacoco Report: " + reports.html.outputLocation.asFile.get().absolutePath)
+//                }
+//            }
+//
+//            tasks.register<JacocoMerge>("mergeJacoco${variantCapName}Execution") {
+//                group = "jacoco"
+//                description =
+//                    "Generate merged jacoco execution for test${variantCapName}UnitTest and create${variantCapName}AndroidTestCoverageReport"
+//                executionData(
+//                    tasks.getByName("test${variantCapName}UnitTest"),
+//                )
+//                val androidCoverageTask =
+//                    tasks.getByName("create${variantCapName}AndroidTestCoverageReport")
+//                if (androidCoverageTask is com.android.build.gradle.internal.coverage.JacocoReportTask) {
+//                    executionData(androidCoverageTask.jacocoConnectedTestsCoverageDir.asFileTree)
+//                }
+//                doLast {
+//                    logger.lifecycle("Jacoco Execution: " + destinationFile.absolutePath)
+//                }
+//            }
+//        }
+//    }
+//}
 
