@@ -21,7 +21,7 @@ dependencies {
 }
 
 // 用于指定所有的group
-group = "com.github.hanlyjiang"
+group = "io.github.hanlyjiang"
 // 用于指定当前仓库本身的版本
 // 多个插件分别指定插件的版本在本地测试时会有插件仓库自身和插件的版本匹配问题，我们在这里统一指定
 // 问题在于：
@@ -35,7 +35,7 @@ version = "0.0.3"
 gradlePlugin {
     plugins {
         create("android-jacoco-config") {
-            id = "com.github.hanlyjiang.android-jacoco-config"
+            id = "io.github.hanlyjiang.android-jacoco-config"
             implementationClass = "com.hanlyjiang.github.gradle.plugin.jacoco.AndroidJacocoConfigPlugin"
         }
     }

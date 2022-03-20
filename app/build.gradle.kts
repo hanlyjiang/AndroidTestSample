@@ -4,7 +4,7 @@ import com.github.hanlyjiang.gradle_helper.PropertiesUtils.writeLocalProperties
 plugins {
     id("com.android.application")
     // 使用 plugin 替换手动配置，需要AGP 7.0 及以上
-    id("com.github.hanlyjiang.android-jacoco-config") version ("0.0.3")
+    id("io.github.hanlyjiang.android-jacoco-config") version ("0.0.3")
 }
 
 android {
