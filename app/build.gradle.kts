@@ -60,9 +60,43 @@ dependencies {
     implementation("com.google.android.material:material:1.5.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.3")
 
+    val mockitoVersion = "3.3.3"
+    val powerMockitoVersion = "2.0.9"
+    // 测试依赖
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.3")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.9.3")
+    testImplementation("org.mockito:mockito-core:$mockitoVersion")
+    testImplementation("org.powermock:powermock-api-mockito2:$powerMockitoVersion")
+    testImplementation("org.powermock:powermock-api-junit4:$powerMockitoVersion")
+
+    // Android Test Others
+    // 架构组件测试
+    androidTestImplementation("android.arch.core:core-testing:1.1.1")
+    // Mockito-android
+    androidTestImplementation("org.mockito:mockito-android:$mockitoVersion")
+    // Android test and test-ext
+    val androidTestVersion = "1.4.0"
+    val extTruthVersion = "1.4.0"
+    val extJunitVersion = "1.1.3"
+    androidTestImplementation("androidx.test:core:$androidTestVersion")
+    androidTestImplementation("androidx.test:runner:$androidTestVersion")
+    androidTestImplementation("androidx.test:rules:$androidTestVersion")
+    androidTestImplementation("androidx.test.ext:truth:$extTruthVersion")
+    androidTestImplementation("androidx.test.ext:junit:$extJunitVersion")
+    androidTestImplementation("androidx.test.ext:junit-ktx:$extJunitVersion")
+    // Espresso dependencies
+    val espressoVersion = "3.4.0"
+    androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion")
+    androidTestImplementation("androidx.test.espresso:espresso-contrib:$espressoVersion")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:$espressoVersion")
+    androidTestImplementation("androidx.test.espresso:espresso-accessibility:$espressoVersion")
+    androidTestImplementation("androidx.test.espresso:espresso-web:$espressoVersion")
+    androidTestImplementation("androidx.test.espresso.idling:idling-concurrent:$espressoVersion")
+    // The following Espresso dependency can be either "implementation"
+    // or "androidTestImplementation", depending on whether you want the
+    // dependency to appear on your APK's compile classpath or the test APK
+    // classpath.
+    androidTestImplementation("androidx.test.espresso:espresso-idling-resource:$espressoVersion")
 }
 
 tasks.create("setUseAAR") {
